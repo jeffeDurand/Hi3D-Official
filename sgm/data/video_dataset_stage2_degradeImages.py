@@ -1,7 +1,6 @@
 import pytorch_lightning as pl
 import numpy as np
 import torch
-import PIL
 import os
 import random
 from skimage.io import imread
@@ -10,10 +9,6 @@ import PIL.Image as Image
 from torch.utils.data import Dataset
 from torch.utils.data.distributed import DistributedSampler
 from pathlib import Path
-
-# from ldm.base_utils import read_pickle, pose_inverse
-import torchvision.transforms as transforms
-import torchvision
 from einops import rearrange
 
 # for the degraded images
@@ -56,7 +51,7 @@ def prepare_inputs(image_path, elevation_input, crop_size=-1, image_size=256):
 
 
 class VideoTrainDataset(Dataset):
-    def __init__(self, base_folder='/data/yanghaibo/datas/OBJAVERSE-LVIS/images', depth_folder="/mnt/drive2/3d/OBJAVERSE-DEPTH/depth256", width=1024, height=576, sample_frames=25):
+    def __init__(self, base_folder='/data/yanghaibo/datas/OBJAVERSE-LVIS/images', depth_folder="/mnt/drive2/3d/OBJAVERSE-DEPTH/depth256", width=1024, height=576, sample_frames=25, elevations=[-10, 0, 10, 20, 30, 40], fixed_index = -1):
         """
         Args:
             num_samples (int): Number of samples in the dataset.
@@ -74,7 +69,8 @@ class VideoTrainDataset(Dataset):
         self.width = width
         self.height = height
         self.sample_frames = sample_frames
-        self.elevations = [-10, 0, 10, 20, 30, 40]
+        self.elevations = elevations
+        self.fixed_index = fixed_index
         
         # for degraded images
         with open('configs/train_realesrnet_x4plus.yml', mode='r') as f:
@@ -138,16 +134,19 @@ class VideoTrainDataset(Dataset):
             raise ValueError(
                 f"The selected folder '{chosen_folder}' contains fewer than `{self.sample_frames}` frames.")
 
-        # Randomly select a start index for frame sequence. Fixed elevation
+        nb_per_range = int(len(frames) / len(self.elevations))
+
         start_idx = random.randint(0, len(frames) - 1)
-        # start_idx = random.choice([0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92])
-        range_id = int(start_idx / 16)  # 0, 1, 2, 3, 4, 5
+        if self.fixed_index != -1:
+            start_idx = self.fixed_index
+        
+        range_id = int(start_idx / nb_per_range)
         elevation = self.elevations[range_id]
         selected_frames = []
         
-        for frame_idx in range(start_idx, (range_id + 1) * 16):
+        for frame_idx in range(start_idx, (range_id + 1) * nb_per_range):
             selected_frames.append(frames[frame_idx])
-        for frame_idx in range((range_id) * 16, start_idx):
+        for frame_idx in range((range_id) * nb_per_range, start_idx):
             selected_frames.append(frames[frame_idx])
             
         # Initialize a tensor to store the pixel values
@@ -186,7 +185,7 @@ class VideoTrainDataset(Dataset):
         kernels = []
         kernel2s = []
         sinc_kernels = []
-        for i in range(16):
+        for i in range(nb_per_range):
             kernel_size = random.choice(self.kernel_range)
             if np.random.uniform() < self.opt['sinc_prob']:
                 # this sinc filter setting is for kernels ranging from [7, 21]

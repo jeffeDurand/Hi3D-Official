@@ -1,30 +1,22 @@
-import re
+import shutil
 import cv2
 import einops
 import numpy as np
 import torch
 import random
 import math
-from PIL import Image, ImageDraw, ImageFont
-import shutil
-import glob
-from tqdm import tqdm
-import subprocess as sp
+from PIL import Image
 from copy import deepcopy
 import argparse
-
-import imageio
-import sys
 import os
-import json
 import datetime
 import string
-from dataset.opencv_transforms.functional import to_tensor, center_crop
+from dataset.opencv_transforms.functional import to_tensor
 
 from pytorch_lightning import seed_everything
 from sgm.util import append_dims
-from vtdm.model import create_model, load_state_dict
-from vtdm.util import tensor2vid, export_to_video
+from vtdm.model import create_model
+from vtdm.util import tensor2vid, export_to_video, export_to_pngs
 
 seed = random.randint(0, 65535)
 # seed = 20
@@ -41,6 +33,12 @@ parser.add_argument('--denoise_checkpoint', type=str, default="ckpts/second_stag
 parser.add_argument('--image_path', type=str, default="demo/15_out.png")
 parser.add_argument("--output_dir", type=str, default="outputs/15_out")
 parser.add_argument('--elevation', type=int, default=0)
+parser.add_argument('--output_video', type=bool, default=True)
+parser.add_argument('--output_frames', type=bool, default=False)
+parser.add_argument('--output_mask', type=bool, default=False)
+parser.add_argument('--output_depth', type=bool, default=False)
+parser.add_argument('--clip_size', type=int, default=48)
+
 params = parser.parse_args()
 
 denoising_model = create_model(params.denoise_config).cpu()
@@ -51,20 +49,16 @@ models['denoising_model'] = denoising_model
 
 def remove_white_background(img):
     pic = Image.fromarray(img)
-    pic = pic.convert('RGBA') # 转为RGBA模式
+    pic = pic.convert('RGBA')
     width,height = pic.size
-    array = pic.load() # 获取图片像素操作入口
+    array = pic.load()
     for i in range(width):
         for j in range(height):
-            pos = array[i,j] # 获得某个像素点，格式为(R,G,B,A)元组
-            # 如果R G B三者都大于240(很接近白色了，数值可调整)
+            pos = array[i,j]
             isEdit = (sum([1 for x in pos[0:3] if x > 220]) == 3)
             if isEdit:
-                # 更改为透明
                 array[i,j] = (255,255,255,0)
 
-    # 保存图片
-    # pic.save('a.png')
     image = np.array(pic)
     mask = image[:,:,3].astype(np.float32)/255
     return mask
@@ -199,23 +193,30 @@ def process(args, key='image'):
     out_list = video_pipeline(frames, masks, key, args)
     
     output_videos_path = args["output_dir"]
-    output_videos_path = os.path.join(output_videos_path, "second_step_video")
-    os.makedirs(output_videos_path, exist_ok=True)
-        
-    output_video = os.path.join(output_videos_path, 'second.mp4')
     
-    export_to_video(out_list, output_video, save_to_gif=False, use_cv2=False, fps=8)        
+    if params.output_frames:
+        export_to_pngs(out_list, output_videos_path, masks_list)
+        
+    if params.output_video:    
+        output_videos_path = os.path.join(output_videos_path, "second_step_video")
+        os.makedirs(output_videos_path, exist_ok=True)
+            
+        output_video = os.path.join(output_videos_path, 'second.mp4')
+        
+        export_to_video(out_list, output_video, save_to_gif=False, use_cv2=False, fps=8)        
 
 # step2: generate high resolution images
 
 temp_image_dir = os.path.join(params.output_dir, "temp_image")
 white_image_path = os.path.join(temp_image_dir, "white.png")
-first_step_video = os.path.join(params.output_dir, "first_step/first.mp4")
+first_step_video = os.path.join(params.output_dir, "first.mp4")
+first_step_frames = os.path.join(params.output_dir, "first_step_frames")
 
 infer_config = {
         "image_path": white_image_path,
         "video_path": first_step_video,
-        "clip_size": 16,
+        "frames_path": first_step_frames,
+        "clip_size": params.clip_size,
         "input_resolution": [
             1024,
             1024
@@ -234,3 +235,5 @@ infer_config = {
 }
 
 process(infer_config)
+
+shutil.rmtree(temp_image_dir)

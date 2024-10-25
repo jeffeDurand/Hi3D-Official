@@ -26,7 +26,6 @@ from sgm.util import instantiate_from_config
 from vtdm.logger import setup_logger
 from vtdm.callbacks import TextProgressBar
 
-
 def get_parser(**parser_kwargs):
     def str2bool(v):
         if isinstance(v, bool):
@@ -149,7 +148,8 @@ def nondefault_trainer_args(opt):
 
 
 if __name__ == "__main__":
-
+    torch.set_float32_matmul_precision('medium')
+    
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     sys.path.append(os.getcwd())
     parser = get_parser()
@@ -206,7 +206,6 @@ if __name__ == "__main__":
     if node_rank == 0:
         codedir = os.path.join(logdir, "code")
         copy_folders = ['dataset', 'sgm', 'vtdm']
-        os.mkdir(codedir)
 
         import shutil
         for folder in copy_folders:
@@ -337,8 +336,8 @@ if __name__ == "__main__":
             callbacks_cfg = OmegaConf.create()
 
         if 'metrics_over_trainsteps_checkpoint' in callbacks_cfg:
-            pl_logger.info(
-                'Caution: Saving checkpoints every n train steps without deleting. This might require some free space.')
+            #pl_logger.info(
+            #    'Caution: Saving checkpoints every n train steps without deleting. This might require some free space.')
             default_metrics_over_trainsteps_ckpt_dict = {
                 'metrics_over_trainsteps_checkpoint':
                     {"target": 'pytorch_lightning.callbacks.ModelCheckpoint',
@@ -417,7 +416,7 @@ if __name__ == "__main__":
         def melk(*args, **kwargs):
             # run all checkpoint hooks
             if trainer.global_rank == 0:
-                pl_logger.info("Summoning checkpoint.")
+                pl_logger.info(" Summoning checkpoint (melk).")
                 ckpt_path = os.path.join(ckptdir, "last.ckpt")
                 trainer.save_checkpoint(ckpt_path)
 

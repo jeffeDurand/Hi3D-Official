@@ -51,7 +51,7 @@ def prepare_inputs(image_path, elevation_input, crop_size=-1, image_size=256):
 
 
 class VideoTrainDataset(Dataset):
-    def __init__(self, base_folder='/data/yanghaibo/datas/OBJAVERSE-LVIS/images', width=1024, height=576, sample_frames=25):
+    def __init__(self, base_folder='/data/yanghaibo/datas/OBJAVERSE-LVIS/images', width=1024, height=576, sample_frames=25, elevations=[-10, 0, 10, 20, 30, 40], fixed_index=-1):
         """
         Args:
             num_samples (int): Number of samples in the dataset.
@@ -65,7 +65,8 @@ class VideoTrainDataset(Dataset):
         self.width = width
         self.height = height
         self.sample_frames = sample_frames
-        self.elevations = [-10, 0, 10, 20, 30, 40]  
+        self.elevations = elevations
+        self.fixed_index = fixed_index
 
     def __len__(self):
         return self.num_samples
@@ -98,15 +99,19 @@ class VideoTrainDataset(Dataset):
             raise ValueError(
                 f"The selected folder '{chosen_folder}' contains fewer than `{self.sample_frames}` frames.")
 
-        # Randomly select a start index for frame sequence. Fixed elevation
+        nb_per_range = int(len(frames) / len(self.elevations))
+        
         start_idx = random.randint(0, len(frames) - 1)
-        range_id = int(start_idx / 16)  # 0, 1, 2, 3, 4, 5
+        if self.fixed_index != -1:
+            start_idx = self.fixed_index
+            
+        range_id = int(start_idx / nb_per_range)  # 0, 1, 2, 3, 4, 5
         elevation = self.elevations[range_id]
         selected_frames = []
         
-        for frame_idx in range(start_idx, (range_id + 1) * 16):
+        for frame_idx in range(start_idx, (range_id + 1) * nb_per_range):
             selected_frames.append(frames[frame_idx])
-        for frame_idx in range((range_id) * 16, start_idx):
+        for frame_idx in range((range_id) * nb_per_range, start_idx):
             selected_frames.append(frames[frame_idx])
             
         # Initialize a tensor to store the pixel values

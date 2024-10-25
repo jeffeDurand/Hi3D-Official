@@ -29,7 +29,7 @@ class VideoLDM(DiffusionEngine):
         self.num_samples = num_samples
         
         # self.warp_model = FirstFrameFlowWarper(freeze=True)
-        self.warp_model = DegradedImages(freeze=True)
+        self.warp_model = DegradedImages(freeze=True, num_samples=num_samples)
         # self.warp_model = FirstFrameFlowWarper(freeze=True)
 
     def init_from_ckpt(

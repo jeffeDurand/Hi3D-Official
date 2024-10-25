@@ -4,11 +4,16 @@ import numpy as np
 import imageio
 import torchvision
 import math
+import os
+import rembg
 
 from einops import rearrange
 from typing import List
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from pillow_heif import register_heif_opener
+
+register_heif_opener()  # Enable HEIC format for PIL
 
 def tensor2vid(video: torch.Tensor, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]) -> List[np.ndarray]:
     mean = torch.tensor(mean, device=video.device).reshape(1, -1, 1, 1, 1)  # ncfhw
@@ -20,6 +25,42 @@ def tensor2vid(video: torch.Tensor, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]) -
     images = [(image.cpu().numpy() * 255).astype('uint8') for image in images]  # f h w c
     return images
 
+'''
+def export_frames_to_heic(video_frames: List[np.ndarray], depth_frames: List[np.ndarray], output_folder: str):
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    for i, (color_frame, depth_frame) in enumerate(zip(video_frames, depth_frames)):
+        color_filename = os.path.join(output_folder, f"color_frame_{i:03d}.heic")
+        depth_filename = os.path.join(output_folder, f"depth_frame_{i:03d}.heic")
+
+        color_image = Image.fromarray(color_frame)
+        depth_image = Image.fromarray(depth_frame)
+
+        color_image.save(color_filename, format="HEIC")
+        depth_image.save(depth_filename, format="HEIC")
+
+    return output_folder
+'''
+
+def export_to_pngs(frames: List[np.ndarray], output_images_path: str) -> str:
+    if not os.path.exists(output_images_path):
+        os.makedirs(output_images_path)
+    
+    rembg_session = rembg.new_session()
+    
+    for i, frame in enumerate(frames):
+        frame_filename = os.path.join(output_images_path, f"frame_{i:03d}.png")
+        frameRm = rembg.remove(frame, session=rembg_session, alpha_matting=True, post_process_mask=True)
+        output_image = Image.fromarray(frameRm)
+        output_image.save(frame_filename)
+
+        imageio.imwrite(frame_filename, frameRm)
+    
+        frame_filename_mask = os.path.join(output_images_path, f"frame_{i:03d}-mask.png")
+        mask = np.where(frameRm[:, :, 3] > 0, 255, 0).astype(np.uint8)
+        mask_image = Image.fromarray(mask)
+        mask_image.save(frame_filename_mask)
 
 def export_to_video(video_frames: List[np.ndarray], output_video_path: str = None, save_to_gif=False, use_cv2=True, fps=8) -> str:
     h, w, c = video_frames[0].shape

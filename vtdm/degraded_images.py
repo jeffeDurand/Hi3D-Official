@@ -43,12 +43,13 @@ from torch.nn import functional as F
 import torch.nn as nn
 
 class DegradedImages(torch.nn.Module):
-    def __init__(self, freeze=True):
+    def __init__(self, freeze=True, num_samples=16):
         super().__init__()
         
         with open('configs/train_realesrnet_x4plus.yml', mode='r') as f:
             opt = yaml.load(f, Loader=yaml.FullLoader)
         self.opt = opt
+        self.num_samples = num_samples
     
     @autocast
     @torch.no_grad()
@@ -165,7 +166,7 @@ class DegradedImages(torch.nn.Module):
             lqs = F.interpolate(lqs, size=(ori_h, ori_w), mode=mode)      # 16,3,1024,1024
 
             lqs = rearrange(lqs, 't c h w -> t h w c') # 16, 1024, 1024, 3
-            for j in range(16):
+            for j in range(self.num_samples):
                 lqs[j][mask[j]==0] = 1.0
             all_lqs.append(lqs)
             

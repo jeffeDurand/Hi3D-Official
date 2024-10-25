@@ -13,12 +13,13 @@ from vtdm.model import create_model, load_state_dict
 
 
 class DepthEmbedder(AbstractEmbModel):
-    def __init__(self, freeze=True, use_3d=False, shuffle_size=3, scale_factor=2.6666):
+    def __init__(self, freeze=True, use_3d=False, shuffle_size=3, scale_factor=2.6666, sample_frames=16):
         super().__init__()
         self.model = MiDaSInference(model_type="dpt_hybrid", model_path="ckpts/dpt_hybrid_384.pt").cuda()
         self.use_3d = use_3d
         self.shuffle_size = shuffle_size
         self.scale_factor = scale_factor
+        self.sample_frames = sample_frames
         if freeze:
             self.freeze()
         
@@ -31,7 +32,7 @@ class DepthEmbedder(AbstractEmbModel):
     @torch.no_grad()
     def forward(self, x):
         if len(x.shape) == 4:       # (16, 3, 512, 512)
-            x = rearrange(x, '(b t) c h w -> b c t h w', t=16)
+            x = rearrange(x, '(b t) c h w -> b c t h w', t=self.sample_frames)
         B, C, T, H, W = x.shape   # (1, 3, 16, 1024, 1024)
         
         sH = int(H / self.scale_factor / 32) * 32

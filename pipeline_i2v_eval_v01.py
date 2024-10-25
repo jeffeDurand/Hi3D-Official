@@ -1,32 +1,19 @@
 import os
-import re
 import PIL.Image
 import cv2
 import einops
-import numpy as np
 import torch
 import random
 import math
 import PIL
 import rembg
-from PIL import Image, ImageDraw, ImageFont
-import shutil
-import glob
-from tqdm import tqdm
-import subprocess as sp
+from PIL import Image
 import argparse
-from skimage.io import imread
-import imageio
-import sys
-import json
-import datetime
-import string
 from dataset.opencv_transforms.functional import to_tensor, center_crop
 
 from pytorch_lightning import seed_everything
-from sgm.util import append_dims
-from vtdm.model import create_model, load_state_dict
-from vtdm.util import tensor2vid, export_to_video
+from vtdm.model import create_model
+from vtdm.util import tensor2vid, export_to_video, export_to_pngs
 
 models = {}
 
@@ -42,6 +29,10 @@ parser.add_argument('--denoise_checkpoint', type=str, default="ckpts/first_stage
 parser.add_argument('--image_path', type=str, default="demo/15_out.png")
 parser.add_argument("--output_dir", type=str, default="outputs/15_out")
 parser.add_argument('--elevation', type=int, default=0)
+parser.add_argument('--output_video', type=bool, default=True)
+parser.add_argument('--output_frames', type=bool, default=False)
+parser.add_argument('--clip_size', type=int, default=16)
+
 params = parser.parse_args()
 
 denoise_config = params.denoise_config
@@ -52,12 +43,6 @@ denoising_model.init_from_ckpt(denoise_checkpoint)
 denoising_model = denoising_model.cuda().half()
                                                  
 models['denoising_model'] = denoising_model
-
-def random_name():
-    p1 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    p2 = ''.join(random.choice(string.ascii_lowercase) for i in range(16))
-    return p1 + '_' + p2
-    
     
 def denoising(frames, aes, mv, elevation):
     with torch.no_grad():        
@@ -104,7 +89,6 @@ def video_pipeline(frames, key, args):
     
     out_list = []
     for it in range(num_iter):
-        
         with torch.no_grad():
             results = denoising(frames, args['aes'], args['mv'], args['elevation'])
                
@@ -123,10 +107,14 @@ def video_pipeline(frames, key, args):
     prex_ckpt = (prex_ckpt[0] + '_' + prex_ckpt[1])[:-3]
     prex = prex + '_' + prex_config + '_' + prex_ckpt + '_seed_' + str(seed)
     
-    output_videos_dir = os.path.join(args["output_dir"], "first_step")
-    os.makedirs(output_videos_dir, exist_ok=True)
-    output_videos_path = os.path.join(output_videos_dir, "first.mp4")
-    export_to_video(out_list, output_videos_path, save_to_gif=False, use_cv2=False, fps=8)
+    if params.output_frames:
+        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"))
+        
+    if params.output_video:
+        output_videos_dir = os.path.join(args["output_dir"])
+        os.makedirs(output_videos_dir, exist_ok=True)
+        output_videos_path = os.path.join(output_videos_dir, "first.mp4")
+        export_to_video(out_list, output_videos_path, save_to_gif=False, use_cv2=False, fps=8)
             
 def process(args, key='image'):
     image_path = args['image_path']
@@ -150,18 +138,14 @@ def process(args, key='image'):
     
     video_pipeline(frames, key, args)
 
-# 1. remove background
-rembg_session = rembg.new_session()
 image = PIL.Image.open(params.image_path)
-image = rembg.remove(image, session=rembg_session)
 
-# 2. save to temp image dir
+rembg_session = rembg.new_session()
+image = rembg.remove(image, session=rembg_session, post_process_mask=True)
+
 temp_image_dir = os.path.join(params.output_dir, "temp_image")
 os.makedirs(temp_image_dir, exist_ok=True)
-# save rgba
-temp_image_path = os.path.join(temp_image_dir, "rgba.png")
-image.save(temp_image_path)
-#save white
+
 white_image_path = os.path.join(temp_image_dir, "white.png")
 white_image = Image.new("RGB", image.size, "WHITE")  # WHITE背景
 white_image.paste(image, mask=image.split()[3])
@@ -170,7 +154,7 @@ white_image.save(white_image_path)
 # 3. first step , generate first image, and save in "args.output_dir/first_step/first.mp4"
 infer_config = {
         "image_path": white_image_path,
-        "clip_size": 16,
+        "clip_size": params.clip_size,
         "input_resolution": [
             512,
             512
