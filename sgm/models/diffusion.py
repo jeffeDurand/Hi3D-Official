@@ -239,7 +239,7 @@ class DiffusionEngine(pl.LightningModule):
         self,
         cond: Dict,
         uc: Union[Dict, None] = None,
-        batch_size: int = 16,
+        batch_size: int = 32,
         shape: Union[None, Tuple, List] = None,
         **kwargs,
     ):

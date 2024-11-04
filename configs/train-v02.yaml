@@ -1,14 +1,16 @@
 data:
   target: sgm.data.video_dataset_stage2_degradeImages.VideoDataset
   params:
-    base_folder: datas/OBJAVERSE-LVIS-example/images
+    base_folder: train/target
     depth_folder: datas/depths # not use for now
-    eval_folder: validation_set_example
+    eval_folder: train/validation_set
     width: 1024
     height: 1024
-    sample_frames: 16
-    batch_size: 1 # batch size for a single gpu
+    sample_frames: 32
+    batch_size: 1
     num_workers: 1
+    elevations: [0]
+    fixed_index: 0
 
 model:
   target: vtdm.vtdm_gen_stage2_degradeImage.VideoLDM
@@ -17,11 +19,11 @@ model:
     input_key: video
     scale_factor: 0.18215
     log_keys: caption
-    num_samples: 16
+    num_samples: 32
     trained_param_keys: [all]
     en_and_decode_n_samples_a_time: 1
     disable_first_stage_autocast: True
-    ckpt_path: /mnt/afs_intern/yanghaibo/datas/download_checkpoints/svd_checkpoints/stable-video-diffusion-img2vid-xt/svd_xt_image_decoder_vid2vid.safetensors   ### FIXME: modify using tool_make_init_svd_to_vid2vid.py
+    ckpt_path: /home/ubuntu/Hi3D-Official/train/outputs/logs/2024-10-22T23-25-07_train-v01_00/checkpoints/epoch=000049.ckpt/checkpoint/mp_rank_00_model_states.pt
     
     denoiser_config:
       target: sgm.modules.diffusionmodules.denoiser.Denoiser
@@ -81,6 +83,7 @@ model:
             target: vtdm.encoders.DepthEmbedder
             params:
               shuffle_size: 3
+              sample_frames: 32
           # concat cond (4)
           - input_key: cond_frames
             is_trainable: False
@@ -140,7 +143,7 @@ model:
     loss_fn_config:
       target: sgm.modules.diffusionmodules.loss.StandardDiffusionLoss
       params:
-        num_frames: 16
+        num_frames: 32
         batch2model_keys: [num_video_frames, image_only_indicator]
         sigma_sampler_config:
           target: sgm.modules.diffusionmodules.sigma_sampling.EDMSampling
@@ -164,20 +167,22 @@ model:
         guider_config:
           target: sgm.modules.diffusionmodules.guiders.LinearPredictionGuider
           params:
-            num_frames: 16
+            num_frames: 32
             max_scale: 2.0
             min_scale: 1.0
             
 lightning:
   trainer:
     # gpus: "0,1,2,3,4,5,6,7"
-    gpus: "7,"
+    devices: '0,1,'
     logger_refresh_rate: 20
     check_val_every_n_epoch: 1
     max_epochs: 50
-    accelerator: gpu
+    accelerator: cuda
     strategy: deepspeed_stage_2
     precision: 16
+    elevations: [0]
+    fixed_index: 0
 
   callbacks:
     image_logger:
@@ -187,16 +192,15 @@ lightning:
         increase_log_steps: False
         log_first_step: True
         batch_frequency: 100
-        max_images: 8
+        max_images: 16
         clamp: True
         log_images_kwargs:
-          N: 8
+          N: 16
           sample: True
           ucg_keys: [cond_frames, cond_frames_without_noise]
 
     metrics_over_trainsteps_checkpoint:
       target: pytorch_lightning.callbacks.ModelCheckpoint
       params:
-        every_n_train_steps: 1000
         save_weights_only: False
-        
+        every_n_train_steps: 3000

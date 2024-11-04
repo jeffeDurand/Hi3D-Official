@@ -1,4 +1,16 @@
 datas/
-ckpts/
 .conda
+ckpts
+train
 __pycache__
+.vscode
+*_stage.ckpt
+diffusionlabs
+train1.log
+train2.log
+run.sh
+run2.sh
+demo/*.png
+demo/*.heic
+train-v02-edited.yaml
+inference-*_*.yaml

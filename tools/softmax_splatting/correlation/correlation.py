@@ -290,8 +290,8 @@ class _FunctionCorrelation(torch.autograd.Function):
                 'input': one,
                 'output': rbot0
             }))(
-                grid=tuple([ int((n + 16 - 1) / 16), one.shape[1], one.shape[0] ]),
-                block=tuple([ 16, 1, 1 ]),
+                grid=tuple([ int((n + 32 - 1) / 32), one.shape[1], one.shape[0] ]),
+                block=tuple([ 32, 1, 1 ]),
                 args=[ cupy.int32(n), one.data_ptr(), rbot0.data_ptr() ]
             )
 
@@ -300,8 +300,8 @@ class _FunctionCorrelation(torch.autograd.Function):
                 'input': two,
                 'output': rbot1
             }))(
-                grid=tuple([ int((n + 16 - 1) / 16), two.shape[1], two.shape[0] ]),
-                block=tuple([ 16, 1, 1 ]),
+                grid=tuple([ int((n + 32 - 1) / 32), two.shape[1], two.shape[0] ]),
+                block=tuple([ 32, 1, 1 ]),
                 args=[ cupy.int32(n), two.data_ptr(), rbot1.data_ptr() ]
             )
 
