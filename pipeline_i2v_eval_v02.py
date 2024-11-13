@@ -195,7 +195,7 @@ def process(args, key='image'):
     output_videos_path = args["output_dir"]
     
     if params.output_frames:
-        export_to_pngs(out_list, output_videos_path, masks_list)
+        export_to_pngs(out_list, os.path.join(params.output_dir, "second_step_frames"))
         
     if params.output_video:    
         output_videos_path = os.path.join(output_videos_path, "second_step_video")
