@@ -415,11 +415,13 @@ if __name__ == "__main__":
         # allow checkpointing via USR1
         def melk(*args, **kwargs):
             # run all checkpoint hooks
-            if trainer.global_rank == 0:
+            if trainer.global_rank == 0 and opt.outckpt != '':
+                pl_logger.info("Final checkpoint to " + opt.outckpt)
+                torch.save(model.state_dict(), opt.outckpt)  
+            elif trainer.global_rank == 0:
                 pl_logger.info(" Summoning checkpoint (melk).")
                 ckpt_path = os.path.join(ckptdir, "last.ckpt")
                 trainer.save_checkpoint(ckpt_path)
-
 
         def divein(*args, **kwargs):
             if trainer.global_rank == 0:
