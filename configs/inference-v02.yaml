@@ -75,6 +75,7 @@ model:
           target: vtdm.encoders.DepthEmbedder
           params:
             shuffle_size: 3
+            dpt_model_path: ckpts/dpt_hybrid_384.pt
         - input_key: cond_frames
           is_trainable: false
           ucg_rate: 0.1

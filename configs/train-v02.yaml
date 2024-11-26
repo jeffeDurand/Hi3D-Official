@@ -66,7 +66,7 @@ model:
               open_clip_embedding_config:
                 target: sgm.modules.encoders.modules.FrozenOpenCLIPImageEmbedder
                 params:
-                  version: "ckpts/open_clip_pytorch_model.bin"
+                  version: ckpts/open_clip_pytorch_model.bin
                   freeze: True
           # vector cond (256)
           - is_trainable: False
@@ -80,6 +80,7 @@ model:
             ucg_rate: 0.0
             target: vtdm.encoders.DepthEmbedder
             params:
+              dpt_model_path: ckpts/dpt_hybrid_384.pt
               shuffle_size: 3
           # concat cond (4)
           - input_key: cond_frames

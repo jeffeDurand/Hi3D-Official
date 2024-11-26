@@ -13,9 +13,9 @@ from vtdm.model import create_model, load_state_dict
 
 
 class DepthEmbedder(AbstractEmbModel):
-    def __init__(self, freeze=True, use_3d=False, shuffle_size=3, scale_factor=2.6666, sample_frames=16):
+    def __init__(self, freeze=True, use_3d=False, shuffle_size=3, dpt_model_path='ckpts/dpt_hybrid_384.pt', scale_factor=2.6666, sample_frames=16):
         super().__init__()
-        self.model = MiDaSInference(model_type="dpt_hybrid", model_path="ckpts/dpt_hybrid_384.pt").cuda()
+        self.model = MiDaSInference(model_type="dpt_hybrid", model_path=dpt_model_path).cuda()
         self.use_3d = use_3d
         self.shuffle_size = shuffle_size
         self.scale_factor = scale_factor
@@ -55,13 +55,13 @@ class DepthEmbedder(AbstractEmbModel):
         
 
 class AesEmbedder(AbstractEmbModel):
-    def __init__(self, freeze=True):
+    def __init__(self, freeze=True, aesthetic_model='ckpts/ViT-L-14.pt', aesthetic_mlp_model='ckpts/metric_models/sac+logos+ava1-l14-linearMSE.pth'):
         super().__init__()
-        aesthetic_model, _ = clip.load("ckpts/ViT-L-14.pt")
+        aesthetic_model, _ = clip.load(aesthetic_model)
         del aesthetic_model.transformer
         self.aesthetic_model = aesthetic_model
         self.aesthetic_mlp = MLP(768)
-        self.aesthetic_mlp.load_state_dict(torch.load("ckpts/metric_models/sac+logos+ava1-l14-linearMSE.pth"))
+        self.aesthetic_mlp.load_state_dict(torch.load(aesthetic_mlp_model))
 
         if freeze:
             self.freeze()

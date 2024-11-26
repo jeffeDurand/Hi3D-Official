@@ -65,14 +65,16 @@ model:
               open_clip_embedding_config:
                 target: sgm.modules.encoders.modules.FrozenOpenCLIPImageEmbedder
                 params:
-                  version: "ckpts/open_clip_pytorch_model.bin"
+                  version: ckpts/open_clip_pytorch_model.bin
                   freeze: True
           # vector cond (256)
           - is_trainable: False
             input_key: video
             ucg_rate: 0.0
             target: vtdm.encoders.AesEmbedder
-          
+            params:
+              aesthetic_model: ckpts/ViT-L-14.pt
+              aesthetic_mlp_model: ckpts/metric_models/sac+logos+ava1-l14-linearMSE.pth
           # vector cond (256)
           - is_trainable: False
             input_key: elevation
