@@ -32,6 +32,7 @@ parser.add_argument('--elevation', type=int, default=0)
 parser.add_argument('--output_video', type=bool, default=True)
 parser.add_argument('--output_frames', type=bool, default=False)
 parser.add_argument('--clip_size', type=int, default=16)
+parser.add_argument('--rembg_model_name', type=str, default="u2net")
 
 params = parser.parse_args()
 
@@ -108,7 +109,7 @@ def video_pipeline(frames, key, args):
     prex = prex + '_' + prex_config + '_' + prex_ckpt + '_seed_' + str(seed)
     
     if params.output_frames:
-        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"))
+        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"), model_name=params.rembg_model_name)
         
     if params.output_video:
         output_videos_dir = os.path.join(args["output_dir"])
@@ -140,7 +141,7 @@ def process(args, key='image'):
 
 image = PIL.Image.open(params.image_path)
 
-rembg_session = rembg.new_session()
+rembg_session = rembg.new_session(model_name=params.rembg_model_name)
 image = rembg.remove(image, session=rembg_session, post_process_mask=True)
 
 temp_image_dir = os.path.join(params.output_dir, "temp_image")

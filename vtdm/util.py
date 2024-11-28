@@ -43,11 +43,11 @@ def export_frames_to_heic(video_frames: List[np.ndarray], depth_frames: List[np.
     return output_folder
 '''
 
-def export_to_pngs(frames: List[np.ndarray], output_images_path: str) -> str:
+def export_to_pngs(frames: List[np.ndarray], output_images_path: str, rembg_model_name: str = "u2net") -> str:
     if not os.path.exists(output_images_path):
         os.makedirs(output_images_path)
     
-    rembg_session = rembg.new_session()
+    rembg_session = rembg.new_session(model_name=rembg_model_name)
     
     for i, frame in enumerate(frames):
         frame_filename = os.path.join(output_images_path, f"frame_{i:03d}.png")

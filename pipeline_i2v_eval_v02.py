@@ -38,6 +38,7 @@ parser.add_argument('--output_frames', type=bool, default=False)
 parser.add_argument('--output_mask', type=bool, default=False)
 parser.add_argument('--output_depth', type=bool, default=False)
 parser.add_argument('--clip_size', type=int, default=48)
+parser.add_argument('--rembg_model_name', type=str, default="u2net")
 
 params = parser.parse_args()
 
@@ -195,7 +196,7 @@ def process(args, key='image'):
     output_videos_path = args["output_dir"]
     
     if params.output_frames:
-        export_to_pngs(out_list, os.path.join(params.output_dir, "second_step_frames"))
+        export_to_pngs(out_list, os.path.join(params.output_dir, "second_step_frames"), rembg_model_name=params.rembg_model_name)
         
     if params.output_video:    
         output_videos_path = os.path.join(output_videos_path, "second_step_video")
