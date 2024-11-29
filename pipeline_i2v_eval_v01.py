@@ -109,7 +109,7 @@ def video_pipeline(frames, key, args):
     prex = prex + '_' + prex_config + '_' + prex_ckpt + '_seed_' + str(seed)
     
     if params.output_frames:
-        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"), model_name=params.rembg_model_name)
+        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"), rembg_model_name=params.rembg_model_name)
         
     if params.output_video:
         output_videos_dir = os.path.join(args["output_dir"])
