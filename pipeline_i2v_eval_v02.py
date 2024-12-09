@@ -32,7 +32,7 @@ parser.add_argument('--denoise_config', type=str, default="configs/inference-v02
 parser.add_argument('--denoise_checkpoint', type=str, default="ckpts/second_stage.pt")
 parser.add_argument('--image_path', type=str, default="demo/15_out.png")
 parser.add_argument("--output_dir", type=str, default="outputs/15_out")
-parser.add_argument('--elevation', type=int, default=0)
+parser.add_argument('--elevation', nargs='+', type=int, default=0)
 parser.add_argument('--output_video', type=bool, default=True)
 parser.add_argument('--output_frames', type=bool, default=False)
 parser.add_argument('--output_mask', type=bool, default=False)
