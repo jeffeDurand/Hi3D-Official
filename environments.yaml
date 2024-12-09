@@ -53,7 +53,6 @@ dependencies:
     - gradio
     - streamlit-keyup==0.2.0
     - deepspeed==0.14.5
-    - test-tube
     - -e git+https://github.com/Stability-AI/datapipelines.git@main#egg=sdata
     - basicsr
     - pillow-heif
