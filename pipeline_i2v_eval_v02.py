@@ -160,15 +160,25 @@ def video_pipeline(frames, masks, key, args):
 def process(args, key='image'):
     image_path = args['image_path']
     video_path = args['video_path']
-
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    frames_path = args['frames_path']
     frame_list_raw = []
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame_list_raw.append(frame)
+
+    image_files = sorted([f for f in os.listdir(frames_path) if f.endswith('.png') and not f.endswith('-mask.png')])
+    for image_file in image_files:
+        image_path = os.path.join(frames_path, image_file)
+        frame = cv2.imread(image_path)
+        if frame is not None:
+            frame_list_raw.append(frame)
+
+    if len(frame_list_raw) == 0:
+        cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_list_raw = []
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_list_raw.append(frame)
 
     models['denoising_model'].num_samples = args['clip_size']
     models['denoising_model'].image_size = args['input_resolution']
@@ -196,7 +206,7 @@ def process(args, key='image'):
     output_videos_path = args["output_dir"]
     
     if params.output_frames:
-        export_to_pngs(out_list, os.path.join(params.output_dir, "second_step_frames"), rembg_model_name=params.rembg_model_name)
+        export_to_pngs(out_list, os.path.join(output_videos_path, "second_step_frames"), rembg_model_name=params.rembg_model_name)
         
     if params.output_video:    
         output_videos_path = os.path.join(output_videos_path, "second_step_video")
@@ -208,33 +218,35 @@ def process(args, key='image'):
 
 # step2: generate high resolution images
 
-temp_image_dir = os.path.join(params.output_dir, "temp_image")
-white_image_path = os.path.join(temp_image_dir, "white.png")
-first_step_video = os.path.join(params.output_dir, "first.mp4")
-first_step_frames = os.path.join(params.output_dir, "first_step_frames")
+for e in params.elevation:
+    output_dir = os.path.join(params.output_dir, f'{e}')
+    temp_image_dir = os.path.join(output_dir, "temp_image")
+    white_image_path = os.path.join(temp_image_dir, "white.png")
+    first_step_video = os.path.join(output_dir, "first.mp4")
+    first_step_frames = os.path.join(output_dir, "first_step_frames")
 
-infer_config = {
-        "image_path": white_image_path,
-        "video_path": first_step_video,
-        "frames_path": first_step_frames,
-        "clip_size": params.clip_size,
-        "input_resolution": [
-            1024,
-            1024
-        ],
-        "num_iter": 1,
-        "seed": -1,
-        "aes": 6.0,
-        "mv": [
-            0.0,
-            0.0,
-            0.0,
-            10.0
-        ],
-        "elevation": params.elevation,
-        "output_dir": params.output_dir
-}
+    infer_config = {
+            "image_path": white_image_path,
+            "video_path": first_step_video,
+            "frames_path": first_step_frames,
+            "clip_size": params.clip_size,
+            "input_resolution": [
+                1024,
+                1024
+            ],
+            "num_iter": 1,
+            "seed": -1,
+            "aes": 6.0,
+            "mv": [
+                0.0,
+                0.0,
+                0.0,
+                10.0
+            ],
+            "elevation": e,
+            "output_dir": output_dir
+    }
 
-process(infer_config)
+    process(infer_config)
 
-shutil.rmtree(temp_image_dir)
+    shutil.rmtree(temp_image_dir)

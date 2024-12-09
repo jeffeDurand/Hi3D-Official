@@ -28,7 +28,7 @@ parser.add_argument('--denoise_config', type=str, default="configs/inference-v01
 parser.add_argument('--denoise_checkpoint', type=str, default="ckpts/first_stage.pt")
 parser.add_argument('--image_path', type=str, default="demo/15_out.png")
 parser.add_argument("--output_dir", type=str, default="outputs/15_out")
-parser.add_argument('--elevation', type=int, default=0)
+parser.add_argument('--elevation', nargs='+', type=int, default=0)
 parser.add_argument('--output_video', type=bool, default=True)
 parser.add_argument('--output_frames', type=bool, default=False)
 parser.add_argument('--clip_size', type=int, default=16)
@@ -109,7 +109,7 @@ def video_pipeline(frames, key, args):
     prex = prex + '_' + prex_config + '_' + prex_ckpt + '_seed_' + str(seed)
     
     if params.output_frames:
-        export_to_pngs(out_list, os.path.join(params.output_dir, "first_step_frames"), rembg_model_name=params.rembg_model_name)
+        export_to_pngs(out_list, os.path.join(args["output_dir"], "first_step_frames"), rembg_model_name=params.rembg_model_name)
         
     if params.output_video:
         output_videos_dir = os.path.join(args["output_dir"])
@@ -144,33 +144,35 @@ image = PIL.Image.open(params.image_path)
 rembg_session = rembg.new_session(model_name=params.rembg_model_name)
 image = rembg.remove(image, session=rembg_session, post_process_mask=True)
 
-temp_image_dir = os.path.join(params.output_dir, "temp_image")
-os.makedirs(temp_image_dir, exist_ok=True)
+for e in params.elevation:
+    output_dir = os.path.join(params.output_dir, f'{e}')
+    
+    temp_image_dir = os.path.join(output_dir, "temp_image")
+    os.makedirs(temp_image_dir, exist_ok=True)
 
-white_image_path = os.path.join(temp_image_dir, "white.png")
-white_image = Image.new("RGB", image.size, "WHITE")  # WHITE背景
-white_image.paste(image, mask=image.split()[3])
-white_image.save(white_image_path)
+    white_image_path = os.path.join(temp_image_dir, "white.png")
+    white_image = Image.new("RGB", image.size, "WHITE")  # WHITE背景
+    white_image.paste(image, mask=image.split()[3])
+    white_image.save(white_image_path)
 
-# 3. first step , generate first image, and save in "args.output_dir/first_step/first.mp4"
-infer_config = {
-        "image_path": white_image_path,
-        "clip_size": params.clip_size,
-        "input_resolution": [
-            512,
-            512
-        ],
-        "num_iter": 1,
-        "seed": -1,
-        "aes": 6.0,
-        "mv": [
-            0.0,
-            0.0,
-            0.0,
-            10.0
-        ],
-        "elevation": params.elevation,
-        "output_dir": params.output_dir
-}
+    infer_config = {
+            "image_path": white_image_path,
+            "clip_size": params.clip_size,
+            "input_resolution": [
+                512,
+                512
+            ],
+            "num_iter": 1,
+            "seed": -1,
+            "aes": 6.0,
+            "mv": [
+                0.0,
+                0.0,
+                0.0,
+                10.0
+            ],
+            "elevation": e,
+            "output_dir": output_dir
+    }
 
-process(infer_config)
+    process(infer_config)
