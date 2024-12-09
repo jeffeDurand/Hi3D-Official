@@ -158,27 +158,17 @@ def video_pipeline(frames, masks, key, args):
     
         
 def process(args, key='image'):
-    image_path = args['image_path']
-    video_path = args['video_path']
-    frames_path = args['frames_path']
-    frame_list_raw = []
-
-    image_files = sorted([f for f in os.listdir(frames_path) if f.endswith('.png') and not f.endswith('-mask.png')])
-    for image_file in image_files:
-        image_path = os.path.join(frames_path, image_file)
-        frame = cv2.imread(image_path)
-        if frame is not None:
-            frame_list_raw.append(frame)
-
-    if len(frame_list_raw) == 0:
-        cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frame_list_raw = []
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame_list_raw.append(frame)
+    image_path = args['image_path'] 
+    video_path = args['video_path'] 
+ 
+    cap = cv2.VideoCapture(video_path) 
+    fps = cap.get(cv2.CAP_PROP_FPS) 
+    frame_list_raw = [] 
+    while cap.isOpened(): 
+        ret, frame = cap.read() 
+        if not ret: 
+            break 
+        frame_list_raw.append(frame) 
 
     models['denoising_model'].num_samples = args['clip_size']
     models['denoising_model'].image_size = args['input_resolution']
@@ -228,7 +218,6 @@ for e in params.elevation:
     infer_config = {
             "image_path": white_image_path,
             "video_path": first_step_video,
-            "frames_path": first_step_frames,
             "clip_size": params.clip_size,
             "input_resolution": [
                 1024,
@@ -248,5 +237,3 @@ for e in params.elevation:
     }
 
     process(infer_config)
-
-    shutil.rmtree(temp_image_dir)
