@@ -39,6 +39,13 @@ parser.add_argument('--rembg_model_name', type=str, default="u2net")
 
 params = parser.parse_args()
 
+seed = params.seed
+if seed != -1:
+    seed_everything(seed)
+else:
+    random_seed = random.randint(0, 65535)
+    seed_everything(random_seed)
+
 denoising_model = create_model(params.denoise_config).cpu()
 denoising_model.init_from_ckpt(params.denoise_checkpoint)
 denoising_model = denoising_model.cuda().half()
@@ -134,13 +141,6 @@ def denoising(frames, masks, aes, mv, elevation):
 
 
 def video_pipeline(frames, masks, key, args):
-    seed = args['seed']
-    if seed != -1:
-        seed_everything(seed)
-    else:
-        random_seed = random.randint(0, 65535)
-        seed_everything(random_seed)
-        
     num_iter = args['num_iter']
     
     out_list = []
@@ -227,7 +227,6 @@ for e in params.elevation:
                 1024
             ],
             "num_iter": 1,
-            "seed": params.seed,
             "aes": 6.0,
             "mv": [
                 0.0,

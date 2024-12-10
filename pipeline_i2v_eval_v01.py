@@ -34,6 +34,13 @@ parser.add_argument('--rembg_model_name', type=str, default="u2net")
 
 params = parser.parse_args()
 
+seed = params.seed
+if seed != -1:
+    seed_everything(seed)
+else:
+    random_seed = random.randint(0, 65535)
+    seed_everything(random_seed)
+
 denoise_config = params.denoise_config
 denoise_checkpoint = params.denoise_checkpoint
 
@@ -82,13 +89,6 @@ def denoising(frames, aes, mv, elevation):
     return tensor2vid(samples)
 
 def video_pipeline(frames, key, args):
-    seed = args['seed']
-    if seed != -1:
-        seed_everything(seed)
-    else:
-        random_seed = random.randint(0, 65535)
-        seed_everything(random_seed)
-
     num_iter = args['num_iter']
     
     out_list = []
@@ -166,7 +166,6 @@ for e in params.elevation:
                 512
             ],
             "num_iter": 1,
-            "seed": params.seed,
             "aes": 6.0,
             "mv": [
                 0.0,
