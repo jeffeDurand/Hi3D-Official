@@ -17,9 +17,6 @@ from vtdm.util import tensor2vid, export_to_video, export_to_pngs
 
 models = {}
 
-seed = random.randint(0, 65535)
-seed_everything(seed)
-
 import time
 stamp = int(time.time())
 
@@ -32,6 +29,7 @@ parser.add_argument('--elevation', nargs='+', type=int, default=0)
 parser.add_argument('--output_video', type=bool, default=True)
 parser.add_argument('--output_frames', type=bool, default=False)
 parser.add_argument('--clip_size', type=int, default=16)
+parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--rembg_model_name', type=str, default="u2net")
 
 params = parser.parse_args()
@@ -83,9 +81,14 @@ def denoising(frames, aes, mv, elevation):
         
     return tensor2vid(samples)
 
-
 def video_pipeline(frames, key, args):
-    # seed = args['seed']
+    seed = args['seed']
+    if seed != -1:
+        seed_everything(seed)
+    else:
+        random_seed = random.randint(0, 65535)
+        seed_everything(random_seed)
+
     num_iter = args['num_iter']
     
     out_list = []
@@ -163,7 +166,7 @@ for e in params.elevation:
                 512
             ],
             "num_iter": 1,
-            "seed": -1,
+            "seed": params.seed,
             "aes": 6.0,
             "mv": [
                 0.0,
